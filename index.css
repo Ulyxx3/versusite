@@ -1,0 +1,153 @@
+:root {
+  --font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  
+  /* Premium Dark Palette */
+  --color-bg-dark: #0f0f13;
+  --color-bg-card: #1a1a23;
+  --color-text-primary: #ffffff;
+  --color-text-muted: #a0a0b0;
+  
+  /* Vibrant Accents */
+  --color-primary-red: #ff4757;
+  --color-primary-blue: #2ed573;
+  --color-accent-purple: #70a1ff;
+  
+  --shadow-glow: 0 0 20px rgba(112, 161, 255, 0.15);
+  
+  font-family: var(--font-family);
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-dark);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(46, 213, 115, 0.05) 0%, transparent 20%),
+    radial-gradient(circle at 90% 80%, rgba(255, 71, 87, 0.05) 0%, transparent 20%);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+.animate-slide-up {
+  opacity: 0;
+  animation: slideUp 0.8s ease-out forwards;
+}
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+
+/* Typography */
+h1, h2, h3 {
+  line-height: 1.1;
+  margin: 0;
+}
+
+.title-gradient {
+  background: linear-gradient(135deg, var(--color-primary-blue), var(--color-primary-red));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+/* Components */
+.glass-panel {
+  background: rgba(26, 26, 35, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.btn {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: var(--color-bg-card);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--color-text-primary);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3742fa, #5352ed);
+}
+
+.btn-red {
+  background: linear-gradient(135deg, #ff4757, #ff6b81);
+}
+
+.btn-blue {
+  background: linear-gradient(135deg, #2ed573, #7bed9f);
+}
+
+/* Vote Button */
+.vote-btn-glitch {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.vote-btn-glitch::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: 0.5s;
+}
+
+.vote-btn-glitch:hover::after {
+  left: 100%;
+}
+
+.vote-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.vote-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+}

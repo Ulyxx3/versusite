@@ -35,33 +35,33 @@ function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="container" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <header className="container" style={{ padding: '2rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <h1
-          className="title-gradient"
-          style={{ fontSize: '2rem', cursor: 'pointer' }}
+          className="title-gradient animate-fade-in"
+          style={{ fontSize: '3rem', cursor: 'pointer', letterSpacing: '-2px' }}
           onClick={() => {
             if (window.confirm('Return to home? Current progress may be lost.')) setView('LANDING');
           }}
         >
           VERSUSITE
         </h1>
-
       </header>
 
       <main className="container">
         {view === 'LANDING' && (
-          <div style={{ textAlign: 'center', marginTop: '4rem' }}>
-            <h2 style={{ fontSize: '4rem', marginBottom: '1rem', fontWeight: '900', letterSpacing: '-2px' }}>
-              THE ULTIMATE <span className="title-gradient">VERSUS</span> ARENA
+          <div className="animate-slide-up" style={{ textAlign: 'center', marginTop: '6rem' }}>
+            <h2 style={{ fontSize: '5rem', marginBottom: '1.5rem', fontWeight: '900', letterSpacing: '-3px', lineHeight: '1' }}>
+              THE ULTIMATE <br />
+              <span className="title-gradient">VERSUS</span> ARENA
             </h2>
-            <p style={{ color: 'var(--color-text-muted)', marginBottom: '3rem', fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto 3rem' }}>
+            <p style={{ color: 'var(--color-text-muted)', marginBottom: '4rem', fontSize: '1.5rem', maxWidth: '700px', margin: '0 auto 4rem', lineHeight: '1.6' }}>
               Create tournaments. Rank everything. Decide the winner.<br />
               Support for Images, YouTube Videos, and Text.
             </p>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center' }}>
               <button
                 className="btn btn-red"
-                style={{ fontSize: '1.2rem', padding: '1rem 2rem' }}
+                style={{ fontSize: '1.3rem', padding: '1.2rem 3rem' }}
                 onClick={() => setView('CREATOR')}
               >
                 CREATE TOURNAMENT
