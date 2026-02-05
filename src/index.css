@@ -47,6 +47,7 @@ button {
 .title-gradient {
   background: linear-gradient(to right, var(--color-primary-red), #fff, var(--color-primary-blue));
   -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
   font-weight: 800;
 }
