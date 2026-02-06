@@ -1,6 +1,120 @@
 import { useState, useEffect } from 'react';
 import { ITEM_TYPES, getNextMatch, resolveMatch } from '../utils/tournamentLogic';
 
+// Helper to extract YouTube ID
+const getYoutubeId = (url) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+};
+
+const RenderItem = ({ item, side, title, onVote }) => {
+    const isRed = side === 'left';
+    const borderColor = isRed ? 'var(--color-primary-red)' : 'var(--color-primary-blue)';
+    const glowColor = isRed ? 'rgba(255, 71, 87, 0.2)' : 'rgba(46, 213, 115, 0.2)';
+
+    // Determine what text to display for the link
+    let linkText = item.content;
+    if (item.type === ITEM_TYPES.YOUTUBE) linkText = title || 'Loading Title...';
+    if (item.type === ITEM_TYPES.IMAGE) linkText = 'Open Image';
+
+    // Truncate long text
+    if (linkText.length > 50) linkText = linkText.substring(0, 50) + '...';
+
+    return (
+        <div className="vote-card animate-slide-up" style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            border: `1px solid rgba(255,255,255,0.1)`,
+            borderRadius: '24px',
+            overflow: 'hidden',
+            background: 'var(--color-bg-card)',
+            boxShadow: `0 0 40px ${glowColor}`
+        }}>
+            {/* Media Container */}
+            <div style={{
+                flex: 1,
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#000',
+                overflow: 'hidden',
+                minHeight: '200px'
+            }}>
+                {item.type === ITEM_TYPES.TEXT && (
+                    <h1 style={{ padding: '2rem', textAlign: 'center', fontSize: '3rem', wordBreak: 'break-word' }}>{item.content}</h1>
+                )}
+                {item.type === ITEM_TYPES.IMAGE && (
+                    <img src={item.content} alt="Content" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                )}
+                {item.type === ITEM_TYPES.YOUTUBE && (
+                    <iframe
+                        width="100%"
+                        height="100%"
+                        src={`https://www.youtube.com/embed/${getYoutubeId(item.content)}?autoplay=1&mute=1`}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                    />
+                )}
+            </div>
+
+            {/* Controls Container */}
+            <div style={{
+                padding: '1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+                borderTop: '1px solid rgba(255,255,255,0.05)'
+            }}>
+                {/* Link to source */}
+                {(item.type === ITEM_TYPES.YOUTUBE || item.type === ITEM_TYPES.IMAGE) && (
+                    <a
+                        href={item.content}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            color: 'var(--color-text-muted)',
+                            textDecoration: 'none',
+                            fontSize: '0.9rem',
+                            textAlign: 'center',
+                            display: 'block',
+                            transition: 'color 0.2s',
+                            marginBottom: '0.5rem'
+                        }}
+                        onMouseEnter={(e) => e.target.style.color = 'white'}
+                        onMouseLeave={(e) => e.target.style.color = 'var(--color-text-muted)'}
+                    >
+                        {linkText} <span style={{ fontSize: '0.8em' }}>↗</span>
+                    </a>
+                )}
+
+                {/* Vote Button */}
+                <button
+                    onClick={onVote}
+                    className={`btn vote-btn-glitch ${isRed ? 'btn-red' : 'btn-blue'}`}
+                    style={{
+                        width: '100%',
+                        padding: '1.2rem',
+                        fontSize: '1.5rem',
+                        fontWeight: '900',
+                        letterSpacing: '1px',
+                        textTransform: 'uppercase',
+                        boxShadow: `0 4px 20px ${glowColor}`
+                    }}
+                >
+                    VOTE {isRed ? 'RED' : 'BLUE'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 export default function BattleArena({ tournament, onUpdate, onComplete }) {
     const [match, setMatch] = useState(null);
     const [titles, setTitles] = useState({ p1: null, p2: null });
@@ -22,12 +136,7 @@ export default function BattleArena({ tournament, onUpdate, onComplete }) {
     }, 0) : 0;
     const remainingMatches = totalMatches - completedMatches;
 
-    // Helper to extract YouTube ID
-    const getYoutubeId = (url) => {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[2].length === 11) ? match[2] : null;
-    };
+
 
     useEffect(() => {
         if (!tournament) return;
@@ -77,112 +186,7 @@ export default function BattleArena({ tournament, onUpdate, onComplete }) {
 
     if (!match) return <div className="container" style={{ textAlign: 'center' }}>Loading match...</div>;
 
-    const RenderItem = ({ item, side, title }) => {
-        const isRed = side === 'left';
-        const borderColor = isRed ? 'var(--color-primary-red)' : 'var(--color-primary-blue)';
-        const glowColor = isRed ? 'rgba(255, 71, 87, 0.2)' : 'rgba(46, 213, 115, 0.2)';
 
-        // Determine what text to display for the link
-        let linkText = item.content;
-        if (item.type === ITEM_TYPES.YOUTUBE) linkText = title || 'Loading Title...';
-        if (item.type === ITEM_TYPES.IMAGE) linkText = 'Open Image';
-
-        // Truncate long text
-        if (linkText.length > 50) linkText = linkText.substring(0, 50) + '...';
-
-        return (
-            <div className="vote-card animate-slide-up" style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                border: `1px solid rgba(255,255,255,0.1)`,
-                borderRadius: '24px',
-                overflow: 'hidden', // changed from hidden to visible for shadow, but hidden needed for inner content. Compromise: overflow hidden on inner
-                background: 'var(--color-bg-card)',
-                boxShadow: `0 0 40px ${glowColor}`
-            }}>
-                {/* Media Container */}
-                <div style={{
-                    flex: 1,
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: '#000',
-                    overflow: 'hidden',
-                    minHeight: '200px'
-                }}>
-                    {item.type === ITEM_TYPES.TEXT && (
-                        <h1 style={{ padding: '2rem', textAlign: 'center', fontSize: '3rem', wordBreak: 'break-word' }}>{item.content}</h1>
-                    )}
-                    {item.type === ITEM_TYPES.IMAGE && (
-                        <img src={item.content} alt="Content" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    )}
-                    {item.type === ITEM_TYPES.YOUTUBE && (
-                        <iframe
-                            width="100%"
-                            height="100%"
-                            src={`https://www.youtube.com/embed/${getYoutubeId(item.content)}?autoplay=1&mute=1`}
-                            title="YouTube video player"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                        />
-                    )}
-                </div>
-
-                {/* Controls Container */}
-                <div style={{
-                    padding: '1.5rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '1rem',
-                    borderTop: '1px solid rgba(255,255,255,0.05)'
-                }}>
-                    {/* Link to source */}
-                    {(item.type === ITEM_TYPES.YOUTUBE || item.type === ITEM_TYPES.IMAGE) && (
-                        <a
-                            href={item.content}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                                color: 'var(--color-text-muted)',
-                                textDecoration: 'none',
-                                fontSize: '0.9rem',
-                                textAlign: 'center',
-                                display: 'block',
-                                transition: 'color 0.2s',
-                                marginBottom: '0.5rem'
-                            }}
-                            onMouseEnter={(e) => e.target.style.color = 'white'}
-                            onMouseLeave={(e) => e.target.style.color = 'var(--color-text-muted)'}
-                        >
-                            {linkText} <span style={{ fontSize: '0.8em' }}>↗</span>
-                        </a>
-                    )}
-
-                    {/* Vote Button */}
-                    <button
-                        onClick={() => handleVote(item.id)}
-                        className={`btn vote-btn-glitch ${isRed ? 'btn-red' : 'btn-blue'}`}
-                        style={{
-                            width: '100%',
-                            padding: '1.2rem',
-                            fontSize: '1.5rem',
-                            fontWeight: '900',
-                            letterSpacing: '1px',
-                            textTransform: 'uppercase',
-                            boxShadow: `0 4px 20px ${glowColor}`
-                        }}
-                    >
-                        VOTE {isRed ? 'RED' : 'BLUE'}
-                    </button>
-                </div>
-            </div>
-        );
-    };
 
     return (
         <div style={{ height: 'calc(100vh - 120px)', padding: '0 2rem 2rem 2rem', display: 'flex', flexDirection: 'column', maxWidth: '1600px', margin: '0 auto', width: '100%' }}>
@@ -194,7 +198,7 @@ export default function BattleArena({ tournament, onUpdate, onComplete }) {
                 width: '100%',
                 height: '100%',
                 zIndex: -1,
-                background: `radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, ${mousePos.x < window.innerWidth / 2 ? 'rgba(255, 42, 42, 0.15)' : 'rgba(42, 42, 255, 0.15)'} 0%, rgba(0,0,0,0) 50%)`,
+                background: `radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, ${mousePos.x < window.innerWidth / 2 ? 'rgba(255, 42, 42, 0.25)' : 'rgba(42, 42, 255, 0.25)'} 0%, rgba(0,0,0,0) 50%)`,
                 pointerEvents: 'none',
                 transition: 'background 0.2s ease-out'
             }} />
@@ -210,7 +214,7 @@ export default function BattleArena({ tournament, onUpdate, onComplete }) {
             </div>
 
             <div style={{ flex: 1, display: 'flex', gap: '4rem', alignItems: 'center' }}>
-                <RenderItem item={match.p1} side="left" title={titles.p1} />
+                <RenderItem item={match.p1} side="left" title={titles.p1} onVote={() => handleVote(match.p1.id)} />
 
                 <div className="animate-fade-in delay-200" style={{
                     width: '80px',
@@ -230,7 +234,7 @@ export default function BattleArena({ tournament, onUpdate, onComplete }) {
                     <span className="title-gradient">VS</span>
                 </div>
 
-                <RenderItem item={match.p2} side="right" title={titles.p2} />
+                <RenderItem item={match.p2} side="right" title={titles.p2} onVote={() => handleVote(match.p2.id)} />
             </div>
         </div>
     );
