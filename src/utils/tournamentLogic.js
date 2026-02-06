@@ -132,3 +132,51 @@ export const getNextMatch = (tournament) => {
     const currentRound = tournament.rounds[tournament.currentRoundIndex];
     return currentRound.find(m => !m.winner);
 };
+
+export const getRankings = (tournament) => {
+    if (!tournament || !tournament.winner) return [];
+
+    const rankings = [];
+
+    // Rank 1: The Winner
+    rankings.push({ rank: 1, item: tournament.winner });
+
+    // Process rounds in reverse (Finals -> Semis -> Quarters -> ...)
+    // The losers of each round get the next available rank.
+    // e.g., Final loser = Rank 2
+    // Semis losers = Rank 3
+    // Quarters losers = Rank 5
+
+    let currentRank = 2;
+
+    // Use a Set to keep track of who has been ranked to avoid duplicates if something goes wrong,
+    // though conceptually the winner is the only one 'advancing' without losing.
+    const rankedIds = new Set([tournament.winner.id]);
+
+    for (let i = tournament.rounds.length - 1; i >= 0; i--) {
+        const round = tournament.rounds[i];
+        const roundLosers = [];
+
+        round.forEach(match => {
+            if (match.winner) {
+                // Identify the loser
+                const loser = match.winner.id === match.p1.id ? match.p2 : match.p1;
+                if (loser && !rankedIds.has(loser.id)) {
+                    roundLosers.push(loser);
+                    rankedIds.add(loser.id);
+                }
+            }
+        });
+
+        if (roundLosers.length > 0) {
+            roundLosers.forEach(loser => {
+                rankings.push({ rank: currentRank, item: loser });
+            });
+            // The next rank is determined by how many people were ranked above + this batch
+            // Equivalent to: current rank + count of losers in this round
+            currentRank += roundLosers.length;
+        }
+    }
+
+    return rankings;
+};
