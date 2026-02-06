@@ -4,6 +4,16 @@ import { ITEM_TYPES, getNextMatch, resolveMatch } from '../utils/tournamentLogic
 export default function BattleArena({ tournament, onUpdate, onComplete }) {
     const [match, setMatch] = useState(null);
     const [titles, setTitles] = useState({ p1: null, p2: null });
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+    // Track mouse position
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            setMousePos({ x: e.clientX, y: e.clientY });
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, []);
 
     // Calculate match stats
     const totalMatches = tournament ? tournament.items.length - 1 : 0;
@@ -176,6 +186,19 @@ export default function BattleArena({ tournament, onUpdate, onComplete }) {
 
     return (
         <div style={{ height: 'calc(100vh - 120px)', padding: '0 2rem 2rem 2rem', display: 'flex', flexDirection: 'column', maxWidth: '1600px', margin: '0 auto', width: '100%' }}>
+            {/* Dynamic Background */}
+            <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: -1,
+                background: `radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, ${mousePos.x < window.innerWidth / 2 ? 'rgba(255, 42, 42, 0.15)' : 'rgba(42, 42, 255, 0.15)'} 0%, rgba(0,0,0,0) 50%)`,
+                pointerEvents: 'none',
+                transition: 'background 0.2s ease-out'
+            }} />
+
             {/* Info Header */}
             <div className="animate-fade-in" style={{ textAlign: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '2rem', margin: 0, fontWeight: '800', letterSpacing: '-1px' }}>
