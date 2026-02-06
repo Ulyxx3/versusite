@@ -15,9 +15,11 @@ const RenderItem = ({ item, side, title, onVote }) => {
     const glowColor = isRed ? 'rgba(255, 71, 87, 0.2)' : 'rgba(46, 213, 115, 0.2)';
 
     // Determine what text to display for the link
-    let linkText = item.content;
-    if (item.type === ITEM_TYPES.YOUTUBE) linkText = title || 'Loading Title...';
-    if (item.type === ITEM_TYPES.IMAGE) linkText = 'Open Image';
+    let linkText = item.label || item.content;
+    if (!item.label) {
+        if (item.type === ITEM_TYPES.YOUTUBE) linkText = title || 'Loading Title...';
+        if (item.type === ITEM_TYPES.IMAGE) linkText = 'Open Image';
+    }
 
     // Truncate long text
     if (linkText.length > 50) linkText = linkText.substring(0, 50) + '...';

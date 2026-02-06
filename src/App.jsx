@@ -104,6 +104,12 @@ function ResultsView({ tournament, onHome }) {
 
     const fetchTitle = async () => {
       const item = tournament.winner;
+
+      if (item.label) {
+        setWinnerTitle(item.label);
+        return;
+      }
+
       if (item.type === ITEM_TYPES.YOUTUBE) {
         try {
           const response = await fetch(`https://noembed.com/embed?url=${item.content}`);
