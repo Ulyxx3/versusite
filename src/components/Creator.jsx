@@ -390,7 +390,7 @@ function TopListImporter({ onImport }) {
         ];
         const items = games.map((game, i) => ({
             id: crypto.randomUUID(),
-            content: `https://via.placeholder.com/300x400?text=${encodeURIComponent(game.name)}`,
+            content: `https://placehold.co/300x400/png?text=${encodeURIComponent(game.name)}`,
             label: `${game.name} (${game.year})`,
             type: ITEM_TYPES.IMAGE
         }));
@@ -424,7 +424,7 @@ function TopListImporter({ onImport }) {
 
         const items = movies.map((movie, i) => ({
             id: crypto.randomUUID(),
-            content: `https://via.placeholder.com/300x400?text=${encodeURIComponent(movie.name)}`,
+            content: `https://placehold.co/300x400/png?text=${encodeURIComponent(movie.name)}`,
             label: `${movie.name} (${movie.year})`,
             type: ITEM_TYPES.IMAGE
         }));
