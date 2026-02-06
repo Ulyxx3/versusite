@@ -337,17 +337,21 @@ function PlaylistImporter({ onImport }) {
 
 function TopListImporter({ onImport }) {
     const [loading, setLoading] = useState(false);
+    const [importCount, setImportCount] = useState(32);
 
     const importJikanTopAnime = async () => {
         setLoading(true);
         try {
             // Fetch top 50 (2 pages)
             const p1 = await fetch('https://api.jikan.moe/v4/top/anime?page=1').then(r => r.json());
-            const p2 = await fetch('https://api.jikan.moe/v4/top/anime?page=2').then(r => r.json());
+            let allAnime = p1.data || [];
 
-            const allAnime = [...(p1.data || []), ...(p2.data || [])];
+            if (importCount > 25) {
+                const p2 = await fetch('https://api.jikan.moe/v4/top/anime?page=2').then(r => r.json());
+                allAnime = [...allAnime, ...(p2.data || [])];
+            }
 
-            const items = allAnime.map(anime => ({
+            const items = allAnime.slice(0, importCount).map(anime => ({
                 id: crypto.randomUUID(),
                 content: anime.images.jpg.image_url,
                 label: `${anime.title} (${anime.year || '?'})`,
@@ -388,14 +392,24 @@ function TopListImporter({ onImport }) {
             { name: "Batman: Arkham City", year: 2011 },
             { name: "Elden Ring", year: 2022 }
         ];
-        const items = games.map((game, i) => ({
+
+        let targetList = [...games];
+        // If requested more than we have names for, generate generics
+        if (importCount > games.length) {
+            const needed = importCount - games.length;
+            for (let i = 0; i < needed; i++) {
+                targetList.push({ name: `Top Game #${games.length + i + 1}`, year: 2000 + (i % 24) });
+            }
+        }
+
+        const items = targetList.slice(0, importCount).map((game, i) => ({
             id: crypto.randomUUID(),
             content: `https://placehold.co/300x400/png?text=${encodeURIComponent(game.name)}`,
             label: `${game.name} (${game.year})`,
             type: ITEM_TYPES.IMAGE
         }));
         onImport(items);
-        alert('Imported 20 Mock Games (IGDB requires API Key)');
+        alert(`Imported ${items.length} Mock Games (IGDB requires API Key)`);
     }
 
     const importMockMovies = () => {
@@ -422,19 +436,40 @@ function TopListImporter({ onImport }) {
             { name: "It's a Wonderful Life", year: 1946 }
         ];
 
-        const items = movies.map((movie, i) => ({
+        let targetList = [...movies];
+        if (importCount > movies.length) {
+            const needed = importCount - movies.length;
+            for (let i = 0; i < needed; i++) {
+                targetList.push({ name: `Top Movie #${movies.length + i + 1}`, year: 1950 + (i % 70) });
+            }
+        }
+
+        const items = targetList.slice(0, importCount).map((movie, i) => ({
             id: crypto.randomUUID(),
             content: `https://placehold.co/300x400/png?text=${encodeURIComponent(movie.name)}`,
             label: `${movie.name} (${movie.year})`,
             type: ITEM_TYPES.IMAGE
         }));
         onImport(items);
-        alert('Imported 20 Mock Movies (IMDb requires API Key)');
+        alert(`Imported ${items.length} Mock Movies (IMDb requires API Key)`);
     }
 
     return (
         <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
-            <h4 style={{ margin: '0 0 0.5rem 0' }}>Import Top 100 Lists</h4>
+            <h4 style={{ margin: '0 0 0.5rem 0' }}>Import Top Lists</h4>
+
+            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <label style={{ color: '#ccc' }}>Item Count:</label>
+                <input
+                    type="number"
+                    min="2"
+                    max="100"
+                    value={importCount}
+                    onChange={(e) => setImportCount(Number(e.target.value))}
+                    style={{ width: '80px', padding: '0.3rem', background: '#222', color: 'white', border: '1px solid #444', textAlign: 'center' }}
+                />
+            </div>
+
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                 <button
                     className="btn btn-blue"
