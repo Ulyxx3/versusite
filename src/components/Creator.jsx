@@ -151,85 +151,139 @@ function PlaylistImporter({ onImport }) {
     const [error, setError] = useState('');
 
     const fetchPlaylist = async () => {
-        if (!playlistUrl.includes('list=')) {
+        const listParam = playlistUrl.match(/[?&]list=([^&]+)/);
+        if (!listParam) {
             setError('Invalid URL. Must contain "list=" parameter.');
             return;
         }
+        const listId = listParam[1];
+        const targetUrl = `https://m.youtube.com/playlist?list=${listId}`;
 
         setLoading(true);
         setError('');
 
+        const strategies = [
+            {
+                name: 'CodeTabs Proxy',
+                fetch: async () => {
+                    const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`);
+                    if (!res.ok) throw new Error(res.statusText);
+                    return await res.text();
+                }
+            },
+            {
+                name: 'AllOrigins',
+                fetch: async () => {
+                    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
+                    if (!res.ok) throw new Error(res.statusText);
+                    const data = await res.json();
+                    return data.contents;
+                }
+            },
+            {
+                name: 'CorsProxy',
+                fetch: async () => {
+                    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+                    if (!res.ok) throw new Error(res.statusText);
+                    return await res.text();
+                }
+            }
+        ];
+
+        let html = '';
+        let success = false;
+
+        for (const strategy of strategies) {
+            try {
+                console.log(`Attempting fetch via ${strategy.name}...`);
+                html = await strategy.fetch();
+                if (html && html.length > 1000) {
+                    success = true;
+                    break;
+                }
+            } catch (e) {
+                console.warn(`${strategy.name} failed:`, e);
+            }
+        }
+
+        if (!success) {
+            setLoading(false);
+            setError('Failed to load playlist. Network or Proxy blocked.');
+            return;
+        }
+
         try {
-            // Use corsproxy.io as a more reliable CORS proxy
-            // It returns the raw text, unlike allorigins which wraps in JSON
-            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(playlistUrl)}`;
-            const response = await fetch(proxyUrl);
-
-            if (!response.ok) throw new Error(`Proxy error: ${response.status}`);
-
-            const html = await response.text();
-
             // Find ytInitialData
             const startStr = 'var ytInitialData = ';
             const startIdx = html.indexOf(startStr);
 
-            if (startIdx === -1) throw new Error('Could not parse YouTube data (ytInitialData not found)');
+            if (startIdx === -1) throw new Error('ytInitialData not found. YouTube structure might have changed.');
 
-            // Find end of JSON
-            // It usually ends with ;</script>
             let endIdx = html.indexOf(';</script>', startIdx);
-            if (endIdx === -1) {
-                // Fallback: try finding the first semicolon followed by newline
-                endIdx = html.indexOf(';\n', startIdx);
-            }
-            if (endIdx === -1) {
-                // Fallback: simple semicolon check might be risky if JSON contains it, but ytInitialData is usually a single massive line
-                endIdx = html.indexOf(';', startIdx + startStr.length + 100);
-            }
+            if (endIdx === -1) endIdx = html.indexOf(';\n', startIdx);
+            if (endIdx === -1) endIdx = html.indexOf(';', startIdx + startStr.length + 10000);
 
-            if (endIdx === -1) throw new Error('Could not parse YouTube data (JSON end not found)');
+            if (endIdx === -1) throw new Error('JSON end not found');
 
             const jsonStr = html.substring(startIdx + startStr.length, endIdx);
             const jsonData = JSON.parse(jsonStr);
 
-            // Traverse to find videos
-            // Path: contents.twoColumnBrowseResultsRenderer.tabs[0].tabRenderer.content.sectionListRenderer.contents[0].itemSectionRenderer.contents[0].playlistVideoListRenderer.contents
+            // Traverse to find videos (supports desktop and mobile structures)
             let videos = [];
-            try {
-                const tabs = jsonData.contents.twoColumnBrowseResultsRenderer.tabs;
-                const tab = tabs.find(t => t.tabRenderer?.selected);
-                const contents = tab.tabRenderer.content.sectionListRenderer.contents;
-                const itemSection = contents[0].itemSectionRenderer;
-                const playlistRenderer = itemSection.contents[0].playlistVideoListRenderer;
 
-                if (playlistRenderer && playlistRenderer.contents) {
-                    videos = playlistRenderer.contents
-                        .filter(item => item.playlistVideoRenderer) // Filter out continuation tokens
-                        .map(item => {
-                            const vid = item.playlistVideoRenderer;
-                            return {
-                                id: crypto.randomUUID(),
-                                content: `https://www.youtube.com/watch?v=${vid.videoId}`,
-                                type: ITEM_TYPES.YOUTUBE
-                            };
-                        });
-                }
-            } catch (e) {
-                console.error(e);
-                throw new Error('Structure of YouTube page changed, cannot parse.');
+            const extractVideos = (root) => {
+                let items = [];
+                // Helper to find key recursively (limited depth)
+                // But structure is somewhat known.
+                // Mobile: contents.twoColumnBrowseResultsRenderer... or sectionListRenderer
+                // Let's try standard paths first.
+
+                try {
+                    // Standard Desktop/Mobile path
+                    const tabs = root.contents?.twoColumnBrowseResultsRenderer?.tabs ||
+                        root.contents?.singleColumnBrowseResultsRenderer?.tabs;
+
+                    if (tabs) {
+                        const tab = tabs.find(t => t.tabRenderer?.selected);
+                        const contents = tab?.tabRenderer?.content?.sectionListRenderer?.contents;
+                        if (contents) {
+                            // Iterating sections
+                            contents.forEach(section => {
+                                const list = section.itemSectionRenderer?.contents?.[0]?.playlistVideoListRenderer?.contents;
+                                if (list) items = list;
+                            });
+                        }
+                    }
+                } catch (e) { }
+
+                return items;
+            };
+
+            const rawItems = extractVideos(jsonData);
+
+            if (rawItems.length > 0) {
+                videos = rawItems
+                    .filter(item => item.playlistVideoRenderer)
+                    .map(item => {
+                        const vid = item.playlistVideoRenderer;
+                        return {
+                            id: crypto.randomUUID(),
+                            content: `https://www.youtube.com/watch?v=${vid.videoId}`,
+                            type: ITEM_TYPES.YOUTUBE
+                        };
+                    });
             }
 
             if (videos.length === 0) {
-                setError('No videos found. Privacy settings or empty playlist?');
+                setError('No videos found in parsed data. Empty playlist?');
             } else {
                 onImport(videos);
                 setPlaylistUrl('');
                 alert(`Imported ${videos.length} videos!`);
             }
-
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Failed to fetch playlist');
+            setError(`Parse Error: ${err.message}`);
         } finally {
             setLoading(false);
         }
