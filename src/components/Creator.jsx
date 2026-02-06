@@ -99,22 +99,22 @@ export default function Creator({ onStart, onLoad }) {
                         placeholder="URL or Text content"
                         value={newItemUrl}
                         onChange={(e) => setNewItemUrl(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
                         style={{ flex: 1, padding: '0.5rem', background: '#222', color: 'white', border: '1px solid #444' }}
                     />
                     <button className="btn btn-blue" onClick={handleAddItem}>Add</button>
                 </div>
 
-                <details>
-                    <summary style={{ cursor: 'pointer', color: '#aaa', marginBottom: '0.5rem' }}>Playlist Add (Copy & Paste URL List)</summary>
+                <PlaylistImporter onImport={(newItems) => setItems(prev => [...prev, ...newItems])} />
+
+                <details style={{ marginTop: '1rem' }}>
+                    <summary style={{ cursor: 'pointer', color: '#aaa', marginBottom: '0.5rem' }}>Bulk Add (Copy & Paste URL List)</summary>
                     <textarea
                         value={bulkText}
                         onChange={(e) => setBulkText(e.target.value)}
                         placeholder="Paste URLs one per line..."
                         style={{ width: '100%', height: '100px', background: '#222', color: 'white', border: '1px solid #444', padding: '0.5rem' }}
                     />
-                    <small style={{ color: '#888', display: 'block', marginTop: '0.2rem' }}>
-                        Tip: Use <a href="https://www.youtubeplaylistanalyzer.com" target="_blank" rel="noreferrer" style={{ color: '#4a9eff' }}> Youtube Playlist Analyzer</a> to extract links from a playlist.
-                    </small>
                     <button className="btn btn-primary" style={{ marginTop: '0.5rem' }} onClick={handleBulkAdd}>Add URL List</button>
                 </details>
             </div>
@@ -141,6 +141,122 @@ export default function Creator({ onStart, onLoad }) {
                     <input type="file" hidden accept=".json" onChange={handleImport} />
                 </label>
             </div>
+        </div>
+    );
+}
+
+function PlaylistImporter({ onImport }) {
+    const [playlistUrl, setPlaylistUrl] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const fetchPlaylist = async () => {
+        if (!playlistUrl.includes('list=')) {
+            setError('Invalid URL. Must contain "list=" parameter.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            // Use AllOrigins as a CORS proxy
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(playlistUrl)}`;
+            const response = await fetch(proxyUrl);
+            const data = await response.json();
+
+            if (!data.contents) throw new Error('No content received from proxy');
+
+            // Find ytInitialData
+            const html = data.contents;
+            const startStr = 'var ytInitialData = ';
+            const startIdx = html.indexOf(startStr);
+
+            if (startIdx === -1) throw new Error('Could not parse YouTube data (ytInitialData not found)');
+
+            // Find end of JSON
+            // It usually ends with ;</script>
+            let endIdx = html.indexOf(';</script>', startIdx);
+            if (endIdx === -1) {
+                // Fallback: try finding the first semicolon followed by newline
+                endIdx = html.indexOf(';\n', startIdx);
+            }
+            if (endIdx === -1) {
+                // Fallback: simple semicolon check might be risky if JSON contains it, but ytInitialData is usually a single massive line
+                endIdx = html.indexOf(';', startIdx + startStr.length + 100);
+            }
+
+            if (endIdx === -1) throw new Error('Could not parse YouTube data (JSON end not found)');
+
+            const jsonStr = html.substring(startIdx + startStr.length, endIdx);
+            const jsonData = JSON.parse(jsonStr);
+
+            // Traverse to find videos
+            // Path: contents.twoColumnBrowseResultsRenderer.tabs[0].tabRenderer.content.sectionListRenderer.contents[0].itemSectionRenderer.contents[0].playlistVideoListRenderer.contents
+            let videos = [];
+            try {
+                const tabs = jsonData.contents.twoColumnBrowseResultsRenderer.tabs;
+                const tab = tabs.find(t => t.tabRenderer?.selected);
+                const contents = tab.tabRenderer.content.sectionListRenderer.contents;
+                const itemSection = contents[0].itemSectionRenderer;
+                const playlistRenderer = itemSection.contents[0].playlistVideoListRenderer;
+
+                if (playlistRenderer && playlistRenderer.contents) {
+                    videos = playlistRenderer.contents
+                        .filter(item => item.playlistVideoRenderer) // Filter out continuation tokens
+                        .map(item => {
+                            const vid = item.playlistVideoRenderer;
+                            return {
+                                id: crypto.randomUUID(),
+                                content: `https://www.youtube.com/watch?v=${vid.videoId}`,
+                                type: ITEM_TYPES.YOUTUBE
+                            };
+                        });
+                }
+            } catch (e) {
+                console.error(e);
+                throw new Error('Structure of YouTube page changed, cannot parse.');
+            }
+
+            if (videos.length === 0) {
+                setError('No videos found. Privacy settings or empty playlist?');
+            } else {
+                onImport(videos);
+                setPlaylistUrl('');
+                alert(`Imported ${videos.length} videos!`);
+            }
+
+        } catch (err) {
+            console.error(err);
+            setError(err.message || 'Failed to fetch playlist');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0' }}>Import from YouTube Playlist</h4>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                    type="text"
+                    placeholder="https://www.youtube.com/playlist?list=..."
+                    value={playlistUrl}
+                    onChange={(e) => setPlaylistUrl(e.target.value)}
+                    style={{ flex: 1, padding: '0.5rem', background: '#222', color: 'white', border: '1px solid #444' }}
+                />
+                <button
+                    className="btn btn-blue"
+                    onClick={fetchPlaylist}
+                    disabled={loading}
+                >
+                    {loading ? 'Loading...' : 'Import'}
+                </button>
+            </div>
+            {error && <p style={{ color: '#ff6b6b', marginTop: '0.5rem', fontSize: '0.9rem' }}>{error}</p>}
+            <p style={{ color: '#888', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                Note: Fetches up to 100 first videos.
+            </p>
         </div>
     );
 }
