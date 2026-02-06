@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Creator from './components/Creator';
 import BattleArena from './components/BattleArena';
-import { ITEM_TYPES } from './utils/tournamentLogic';
+import { ITEM_TYPES, getRankings } from './utils/tournamentLogic';
 
 function App() {
   const [view, setView] = useState('LANDING'); // LANDING, CREATOR, BATTLE, RESULTS
@@ -99,9 +99,7 @@ function ResultsView({ tournament, onHome }) {
     if (!tournament.winner) return;
 
     // Calculate rankings immediately
-    import('./utils/tournamentLogic').then(({ getRankings }) => {
-      setRankings(getRankings(tournament));
-    });
+    setRankings(getRankings(tournament));
 
     const fetchTitle = async () => {
       const item = tournament.winner;
