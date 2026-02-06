@@ -105,7 +105,13 @@ export default function Creator({ onStart, onLoad }) {
                     <button className="btn btn-blue" onClick={handleAddItem}>Add</button>
                 </div>
 
-                <PlaylistImporter onImport={(newItems) => setItems(prev => [...prev, ...newItems])} />
+                {newItemType === ITEM_TYPES.YOUTUBE && (
+                    <PlaylistImporter onImport={(newItems) => setItems(prev => [...prev, ...newItems])} />
+                )}
+
+                {newItemType === ITEM_TYPES.IMAGE && (
+                    <TopListImporter onImport={(newItems) => setItems(prev => [...prev, ...newItems])} />
+                )}
 
                 <details style={{ marginTop: '1rem' }}>
                     <summary style={{ cursor: 'pointer', color: '#aaa', marginBottom: '0.5rem' }}>+100 Add (Copy & Paste URL List with <a href="https://www.youtubeplaylistanalyzer.com" target="_blank">Youtube Playlist Analyzer</a>)</summary>
@@ -125,7 +131,7 @@ export default function Creator({ onStart, onLoad }) {
                     {items.map((item, idx) => (
                         <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid #333' }}>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
-                                [{item.type}] {item.content}
+                                [{item.type}] {item.label || item.content}
                             </span>
                             <button onClick={() => setItems(items.filter((_, i) => i !== idx))} style={{ color: 'red' }}>&times;</button>
                         </div>
@@ -311,6 +317,99 @@ function PlaylistImporter({ onImport }) {
             {error && <p style={{ color: '#ff6b6b', marginTop: '0.5rem', fontSize: '0.9rem' }}>{error}</p>}
             <p style={{ color: '#888', fontSize: '0.8rem', marginTop: '0.5rem' }}>
                 Note: Fetches up to 100 first videos.
+            </p>
+        </div>
+    );
+}
+
+
+function TopListImporter({ onImport }) {
+    const [loading, setLoading] = useState(false);
+
+    const importJikanTopAnime = async () => {
+        setLoading(true);
+        try {
+            // Fetch top 50 (2 pages)
+            const p1 = await fetch('https://api.jikan.moe/v4/top/anime?page=1').then(r => r.json());
+            const p2 = await fetch('https://api.jikan.moe/v4/top/anime?page=2').then(r => r.json());
+
+            const allAnime = [...(p1.data || []), ...(p2.data || [])];
+
+            const items = allAnime.map(anime => ({
+                id: crypto.randomUUID(),
+                content: anime.images.jpg.image_url,
+                label: `${anime.title} (${anime.year || '?'})`,
+                type: ITEM_TYPES.IMAGE
+            }));
+
+            onImport(items);
+            alert(`Imported ${items.length} Anime!`);
+        } catch (e) {
+            console.error(e);
+            alert('Failed to fetch Anime: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const importMockGames = () => {
+        // Mock Top Games
+        const games = [
+            { name: "The Legend of Zelda: Ocarina of Time", year: 1998, img: "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/123456/header.jpg" }, // Dummy img
+            { name: "Grand Theft Auto IV", year: 2008, img: "https://upload.wikimedia.org/wikipedia/en/b/b7/Grand_Theft_Auto_IV_cover.jpg" },
+            { name: "SoulCalibur", year: 1998, img: "" },
+            // In a real scenario we need a proxy to IGDB
+        ];
+        const items = Array.from({ length: 20 }).map((_, i) => ({
+            id: crypto.randomUUID(),
+            content: `https://via.placeholder.com/300x400?text=Game+${i + 1}`,
+            label: `Top Game #${i + 1} (202${i % 5})`,
+            type: ITEM_TYPES.IMAGE
+        }));
+        onImport(items);
+        alert('Imported 20 Mock Games (IGDB requires API Key)');
+    }
+
+    const importMockMovies = () => {
+        const items = Array.from({ length: 20 }).map((_, i) => ({
+            id: crypto.randomUUID(),
+            content: `https://via.placeholder.com/300x400?text=Movie+${i + 1}`,
+            label: `Top Movie #${i + 1} (199${i % 9})`,
+            type: ITEM_TYPES.IMAGE
+        }));
+        onImport(items);
+        alert('Imported 20 Mock Movies (IMDb requires API Key)');
+    }
+
+    return (
+        <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0' }}>Import Top 100 Lists</h4>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <button
+                    className="btn btn-blue"
+                    onClick={importJikanTopAnime}
+                    disabled={loading}
+                    style={{ background: '#2e51a2' }} // MAL Color
+                >
+                    {loading ? 'Loading...' : 'MAL Top Anime (Real)'}
+                </button>
+                <button
+                    className="btn btn-primary"
+                    onClick={importMockGames}
+                    style={{ background: '#9147ff' }} // Twitch/IGDB Color
+                >
+                    IGDB Top Games (Mock)
+                </button>
+                <button
+                    className="btn btn-primary"
+                    onClick={importMockMovies}
+                    style={{ background: '#f5c518', color: 'black' }} // IMDb Color
+                >
+                    IMDb Top Movies (Mock)
+                </button>
+            </div>
+            <p style={{ color: '#888', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                Note: MAL uses Jikan API. IGDB/IMDb require keys, showing mock data.
             </p>
         </div>
     );

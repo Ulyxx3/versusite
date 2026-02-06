@@ -200,7 +200,7 @@ function ResultsView({ tournament, onHome }) {
                 {getPreview(item, false)}
               </div>
               <div style={{ flex: 1, fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {item.content}
+                {item.label || item.content}
               </div>
             </div>
           ))}
